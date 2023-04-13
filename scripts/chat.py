@@ -20,10 +20,13 @@ def create_chat_message(role, content):
     Returns:
     dict: A dictionary containing the role and content of the message.
     """
+    # EP NOTE: THIS IS IMPORTANT AND PROBABLY SOMETHING WE'RE NOT UTILIZING ENOUGH
+    # EP NOTE: SPECIFYING WHICH ROLE THE MESSAGE IS COMING FROM
     return {"role": role, "content": content}
 
 
 def generate_context(prompt, relevant_memory, full_message_history, model):
+    # EP NOTE: THIS IS IMPORTANT, THIS IS HOW THE THE PROMPT INFORMATION IS ORGANIZED.
     current_context = [
         create_chat_message(
             "system", prompt),
@@ -69,6 +72,7 @@ def chat_with_ai(
             logger.debug(f"Token limit: {token_limit}")
             send_token_limit = token_limit - 1000
 
+            # EP NOTE: WE GET MEMORY HERE
             relevant_memory = permanent_memory.get_relevant(str(full_message_history[-9:]), 10)
 
             logger.debug(f'Memory Stats: {permanent_memory.get_stats()}')
@@ -77,6 +81,8 @@ def chat_with_ai(
                 prompt, relevant_memory, full_message_history, model)
 
             while current_tokens_used > 2500:
+                # EP NOTE: THIS IS IMPORTANT, WE REMOVE MEMORY UNTIL WE'RE UNDER THE TOKEN LIMIT
+                # EP NOTE: 2500 TOKENS LOOKS LOOKS LIKE THIS INTENDS TO BE SENT INTO THE MODEL AS A TYPICAL PROMPT
                 # remove memories until we are under 2500 tokens
                 relevant_memory = relevant_memory[1:]
                 next_message_to_add_index, current_tokens_used, insertion_index, current_context = generate_context(
@@ -122,6 +128,7 @@ def chat_with_ai(
             logger.debug("----------- END OF CONTEXT ----------------")
 
             # TODO: use a model defined elsewhere, so that model can contain temperature and other settings we care about
+            # EP NOTE: THIS IS ACTUAL CALL TO MODEL
             assistant_reply = create_chat_completion(
                 model=model,
                 messages=current_context,
