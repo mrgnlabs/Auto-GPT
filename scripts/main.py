@@ -64,6 +64,7 @@ def print_assistant_thoughts(assistant_reply):
     global cfg
     try:
         try:
+            # EP NOTE: THERE IS QUITE A BIT OF JSON FIXING HERE
             # Parse and print Assistant response
             assistant_reply_json = fix_and_parse_json(assistant_reply)
         except json.JSONDecodeError as e:
@@ -72,6 +73,7 @@ def print_assistant_thoughts(assistant_reply):
             assistant_reply_json = fix_and_parse_json(assistant_reply_json)
 
         # Check if assistant_reply_json is a string and attempt to parse it into a JSON object
+        # EP NOTE: CHECKS IF JSON IS A STRING AND ATTEMPTS TO PARSE
         if isinstance(assistant_reply_json, str):
             try:
                 assistant_reply_json = json.loads(assistant_reply_json)
@@ -79,10 +81,17 @@ def print_assistant_thoughts(assistant_reply):
                 logger.error("Error: Invalid JSON\n", assistant_reply)
                 assistant_reply_json = attempt_to_fix_json_by_finding_outermost_brackets(assistant_reply_json)
 
+        # EP NOTE: IF MORE FIXING IS NEEDED, COULD SEND OUT TO AN LLM
+
+        # EP NOTE: AUTO-GPT HAS
+        # - REASONING
+        # - PLAN
+        # - CRITICISM
         assistant_thoughts_reasoning = None
         assistant_thoughts_plan = None
         assistant_thoughts_speak = None
         assistant_thoughts_criticism = None
+        # EP NOTE INTERMEDIATE IS THOUGHTS?
         assistant_thoughts = assistant_reply_json.get("thoughts", {})
         assistant_thoughts_text = assistant_thoughts.get("text")
 
@@ -208,7 +217,7 @@ Continue (y/n): """)
     full_prompt = config.construct_full_prompt()
     return full_prompt
 
-
+# EP NOTE: IT'S INTERESTING TO NOTE THAT WE REALLY ONLY ASK FOR USER INPUT ONE TIME EXCEPT IF THE AI DECIDES TO BELOW
 def prompt_user():
     """Prompt the user for input"""
     ai_name = ""
@@ -336,10 +345,19 @@ user_input = "Determine which next command to use, and respond using the format 
 memory = get_memory(cfg, init=True)
 print('Using memory of type: ' + memory.__class__.__name__)
 
+# EP NOTE: THIS IS THE MAIN LOOP
+# EP NOTE: THE TOP LOOP IS JUST A TYPICAL INFINITE TRUE LOOP
 # Interaction Loop
 while True:
     # Send message to AI, get response
     with Spinner("Thinking... "):
+        # EP NOTE: THE AI INTERACTION IS DONE HERE
+        # EP NOTE: PASSED IN:
+        # - PROMPT
+        # - USER INPUT
+        # - FULL MESSAGE HISTORY
+        # - MEMORY
+        # - CONFIGS
         assistant_reply = chat.chat_with_ai(
             prompt,
             user_input,
@@ -347,6 +365,8 @@ while True:
             memory,
             cfg.fast_token_limit) # TODO: This hardcodes the model to use GPT3.5. Make this an argument
 
+    # EP NOTE: THE AI INTERACTION IS DONE HERE
+    # EP NOTE: THIS IS WHERE AI REPLY IS SHOWN TO USER AND IT WAITS FOR ACTION FROM USER
     # Print Assistant thoughts
     print_assistant_thoughts(assistant_reply)
 
@@ -358,6 +378,7 @@ while True:
     except Exception as e:
         logger.error("Error: \n", str(e))
 
+    # EP NOTE: THIS IS ALL USER AUTHORIZATION
     if not cfg.continuous_mode and next_action_count == 0:
         ### GET USER AUTHORIZATION TO EXECUTE COMMAND ###
         # Get key press: Prompt the user to press enter to continue or escape
@@ -412,18 +433,21 @@ while True:
     elif command_name == "human_feedback":
         result = f"Human feedback: {user_input}"
     else:
+        # EP NOTE: THIS IS WHERE IT CAN EXECUTE COMMANDS
         result = f"Command {command_name} returned: {cmd.execute_command(command_name, arguments)}"
         if next_action_count > 0:
             next_action_count -= 1
 
+    # EP NOTE: THIS IS IMPORTANT - THIS IS WHERE NEW MEMORY IS CONSTRUCTED
     memory_to_add = f"Assistant Reply: {assistant_reply} " \
                     f"\nResult: {result} " \
                     f"\nHuman Feedback: {user_input} "
-
+    # EP NOTE: THIS IS IMPORTANT - THIS IS WHERE NEW MEMORY IS ADDED
     memory.add(memory_to_add)
 
     # Check if there's a result from the command append it to the message
     # history
+    # EP NOTE: WE PROBABLY DON'T NEED COMMANDS 
     if result is not None:
         full_message_history.append(chat.create_chat_message("system", result))
         logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
